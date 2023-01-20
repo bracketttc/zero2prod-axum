@@ -1,7 +1,6 @@
-use zero2prod_axum::run;
-
 use axum_server::Server;
 use std::net::SocketAddr;
+use zero2prod_axum::run;
 
 #[tokio::main]
 async fn main() {
