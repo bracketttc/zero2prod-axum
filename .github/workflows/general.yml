@@ -52,7 +52,7 @@ jobs:
         if: steps.cache-sqlx.outputs.cache-hit == false
         with:
           command: install
-          argc: >
+          args: >
             sqlx-cli
             --force
             --version=${{ env.SQLX_VERSION }}
