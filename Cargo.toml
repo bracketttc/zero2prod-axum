@@ -16,9 +16,11 @@ name = "zero2prod"
 [dependencies]
 axum = "0.6"
 axum-server = "0.4"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
 config = "0.13"
 serde = { version = "1", features = ["derive"]}
-tokio = { version = "1", features = [ "macros", "rt-multi-thread" ] }
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+uuid = { version = "1", features = ["v4"] }
 
 # Usingn table-like toml syntax to avoid a super-long line!
 [dependencies.sqlx]

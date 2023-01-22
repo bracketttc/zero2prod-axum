@@ -1,11 +1,16 @@
 use axum::Server;
-use sqlx::{Connection, PgConnection};
+use sqlx::{Connection, PgConnection, PgPool};
 use std::net::TcpListener;
-use zero2prod_axum::configuration::{get_configuration, DatabaseSettings};
+use zero2prod_axum::configuration::get_configuration;
 use zero2prod_axum::startup::run;
 
-fn spawn_app() -> String {
-    let app = run().expect("Failed to create router.");
+async fn spawn_app() -> String {
+    let configuration = get_configuration().expect("Failed to read configuration.");
+    let connection_string = configuration.database.connection_string();
+    let pool = PgPool::connect(&connection_string)
+        .await
+        .expect("Failed to connect to Postgres.");
+    let app = run(pool).expect("Failed to create router.");
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind port.");
     let port = listener.local_addr().unwrap().port();
     tokio::spawn(async move {
@@ -20,7 +25,7 @@ fn spawn_app() -> String {
 
 #[tokio::test]
 async fn health_check_works() {
-    let host = spawn_app();
+    let host = spawn_app().await;
     let client = reqwest::Client::new();
 
     let response = client
@@ -35,10 +40,10 @@ async fn health_check_works() {
 
 #[tokio::test]
 async fn subscribe_returns_200_for_valid_form_data() {
-    let host = spawn_app();
+    let host = spawn_app().await;
     let configuration = get_configuration().expect("Failed to read configuration");
     let connection_string = configuration.database.connection_string();
-    let connection = PgConnection::connect(&connection_string)
+    let mut connection = PgConnection::connect(&connection_string)
         .await
         .expect("Failed to connect to Postgres.");
     let client = reqwest::Client::new();
@@ -53,11 +58,19 @@ async fn subscribe_returns_200_for_valid_form_data() {
         .expect("Failed to execute request.");
 
     assert_eq!(200, response.status().as_u16());
+
+    let saved = sqlx::query!("SELECT email, name FROM subscriptions",)
+        .fetch_one(&mut connection)
+        .await
+        .expect("Failed to fetch saved subscription.");
+
+    assert_eq!(saved.email, "ursula_le_guin@gmail.com");
+    assert_eq!(saved.name, "le guin");
 }
 
 #[tokio::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
-    let host = spawn_app();
+    let host = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=le%20guin", "missing the email"),
