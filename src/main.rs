@@ -1,5 +1,5 @@
 use axum_server::Server;
-use sqlx::{Connection, PgPool};
+use sqlx::PgPool;
 use std::net::SocketAddr;
 use zero2prod_axum::configuration::get_configuration;
 use zero2prod_axum::startup::run;

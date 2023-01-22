@@ -13,6 +13,8 @@ pub fn run(pool: PgPool) -> Result<Router, std::io::Error> {
         //.route("/:name", get(greet))
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
-        .with_state(Arc::new(AppState { connection_pool: pool }));
+        .with_state(Arc::new(AppState {
+            connection_pool: pool,
+        }));
     Ok(app)
 }
