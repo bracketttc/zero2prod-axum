@@ -1,5 +1,6 @@
 use crate::routes::{health_check, subscribe};
 use axum::routing::{get, post, Router};
+use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 use sqlx::PgPool;
 use std::sync::Arc;
 
@@ -13,6 +14,7 @@ pub fn run(pool: PgPool) -> Result<Router, std::io::Error> {
         //.route("/:name", get(greet))
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
+        .layer(opentelemetry_tracing_layer())
         .with_state(Arc::new(AppState {
             connection_pool: pool,
         }));

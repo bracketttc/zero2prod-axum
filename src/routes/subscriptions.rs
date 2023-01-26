@@ -6,6 +6,7 @@ use axum::{
 };
 use chrono::Utc;
 use serde::Deserialize;
+use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -18,11 +19,30 @@ pub struct FormData {
 // Form type is an extractor that works on the body of the request and
 // therefore MUST be the last argument of an axum request handler function. The
 // error output here is less than helpful.
+#[tracing::instrument(
+    name = "Adding a new subscriber",
+    skip(state, form),
+    fields(
+        subscriber_email = %form.email,
+        subscriber_name = %form.name
+    )
+)]
 pub async fn subscribe(
     State(state): State<Arc<AppState>>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
-    match sqlx::query!(
+    match insert_subscriber(&state.connection_pool, &form).await {
+        Ok(_) => StatusCode::OK,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+#[tracing::instrument(
+    name = "Saving new subscriber details in the database",
+    skip(form, pool)
+)]
+pub async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sqlx::Error> {
+    sqlx::query!(
         r#"
         INSERT INTO subscriptions (id, email, name, subscribed_at)
         VALUES ($1, $2, $3, $4)
@@ -32,14 +52,11 @@ pub async fn subscribe(
         form.name,
         Utc::now()
     )
-    // We use `get_ref` to get an immutable reference to the `PgConnection`
-    .execute(&state.connection_pool)
+    .execute(pool)
     .await
-    {
-        Ok(_) => StatusCode::OK,
-        Err(e) => {
-            println!("Failed to execute query: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        }
-    }
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+    Ok(())
 }
