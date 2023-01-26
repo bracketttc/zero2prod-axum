@@ -22,7 +22,7 @@ serde = { version = "1", features = ["derive"]}
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1", features = ["v4"] }
 
-# Usingn table-like toml syntax to avoid a super-long line!
+# Using table-like toml syntax to avoid a super-long line!
 [dependencies.sqlx]
 version = "0.6"
 default-features = false
