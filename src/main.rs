@@ -14,15 +14,17 @@ async fn main() {
 
     let configuration = get_configuration().expect("Failed to read configuration.");
     let connection_string = configuration.database.connection_string();
-    let pool = PgPool::connect(&connection_string.expose_secret())
-        .await
-        .expect("Failed to connect to Postgres.");
+    let pool = PgPool::connect_lazy(&connection_string.expose_secret())
+        .expect("Failed to create Postgres connection pool.");
     let app = run(pool).unwrap().layer(TraceLayer::new_for_http());
-    Server::bind(SocketAddr::from((
-        [127, 0, 0, 1],
-        configuration.application_port,
-    )))
-    .serve(app.into_make_service())
-    .await
-    .unwrap();
+
+    let address = format!(
+        "{}:{}",
+        configuration.application.host, configuration.application.port
+    );
+    let socket: SocketAddr = address.parse().expect("Unable to parse socket address");
+    Server::bind(socket)
+        .serve(app.into_make_service())
+        .await
+        .unwrap();
 }
