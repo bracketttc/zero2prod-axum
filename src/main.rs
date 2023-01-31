@@ -1,6 +1,5 @@
 use axum_server::Server;
-use secrecy::ExposeSecret;
-use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
 use std::net::SocketAddr;
 use tower_http::trace::TraceLayer;
 use zero2prod_axum::configuration::get_configuration;
@@ -13,9 +12,9 @@ async fn main() {
     init_subscriber(subscriber);
 
     let configuration = get_configuration().expect("Failed to read configuration.");
-    let connection_string = configuration.database.connection_string();
-    let pool = PgPool::connect_lazy(&connection_string.expose_secret())
-        .expect("Failed to create Postgres connection pool.");
+    let pool = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(2))
+        .connect_lazy_with(configuration.database.with_db());
     let app = run(pool).unwrap().layer(TraceLayer::new_for_http());
 
     let address = format!(
