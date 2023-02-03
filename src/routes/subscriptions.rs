@@ -1,5 +1,4 @@
 use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
-use crate::startup::AppState;
 use axum::{
     extract::{Form, State},
     http::StatusCode,
@@ -32,21 +31,21 @@ impl TryFrom<FormData> for NewSubscriber {
 // error output here is less than helpful.
 #[tracing::instrument(
     name = "Adding a new subscriber",
-    skip(state, form),
+    skip(connection_pool, form),
     fields(
         subscriber_email = %form.email,
         subscriber_name = %form.name
     )
 )]
 pub async fn subscribe(
-    State(state): State<Arc<AppState>>,
+    State(connection_pool): State<Arc<PgPool>>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
     let new_subscriber = match form.try_into() {
         Ok(form) => form,
         Err(_) => return StatusCode::BAD_REQUEST,
     };
-    match insert_subscriber(&state.connection_pool, &new_subscriber).await {
+    match insert_subscriber(&connection_pool, &new_subscriber).await {
         Ok(_) => StatusCode::OK,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
