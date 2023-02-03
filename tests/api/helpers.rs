@@ -1,10 +1,8 @@
 use once_cell::sync::Lazy;
 use sqlx::{Connection, Executor, PgConnection, PgPool};
-use std::net::TcpListener;
 use uuid::Uuid;
 use zero2prod_axum::configuration::{get_configuration, DatabaseSettings};
-use zero2prod_axum::email_client::EmailClient;
-use zero2prod_axum::startup::run;
+use zero2prod_axum::startup::{get_connection_pool, Application};
 use zero2prod_axum::telemetry::{get_subscriber, init_subscriber};
 
 static TRACING: Lazy<()> = Lazy::new(|| {
@@ -28,29 +26,26 @@ pub struct TestApp {
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
 
-    let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind port.");
-    let port = listener.local_addr().unwrap().port();
-    let host = format!("http://127.0.0.1:{}", port);
+    let configuration = {
+        let mut c = get_configuration().expect("Failed to read configuration.");
+        c.database.database_name = Uuid::new_v4().to_string();
+        c.application.port = 0;
+        c
+    };
 
-    let mut configuration = get_configuration().expect("Failed to read configuration.");
-    configuration.database.database_name = Uuid::new_v4().to_string();
+    configure_database(&configuration.database).await;
 
-    let db_pool = configure_database(&configuration.database).await;
+    let application = Application::build(configuration.clone())
+        .await
+        .expect("Failed to build application.");
+    let host = format!("http://127.0.0.1:{}", application.port());
 
-    let sender_email = configuration
-        .email_client
-        .sender()
-        .expect("Invalid sender email address.");
-    let email_client = EmailClient::new(
-        configuration.email_client.base_url.clone(),
-        sender_email,
-        configuration.email_client.api_key.clone(),
-        configuration.email_client.timeout(),
-    );
+    tokio::spawn(application.run_until_stopped());
 
-    let server = run(listener, db_pool.clone(), email_client);
-    tokio::spawn(server);
-    TestApp { host, db_pool }
+    TestApp {
+        host,
+        db_pool: get_connection_pool(&configuration.database),
+    }
 }
 
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
