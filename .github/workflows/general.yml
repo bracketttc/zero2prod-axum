@@ -24,7 +24,7 @@ jobs:
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - name: Install ld
-        run: apt-get install lld clang
+        run: apt-get update && apt-get install -y lld clang
       - uses: actions/checkout@v3
       - name: Cache dependencies
         id: cache-dependencies
@@ -105,7 +105,7 @@ jobs:
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - name: Install ld
-        run: apt-get install lld clang
+        run: apt-get update && apt-get install -y lld clang
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
@@ -162,7 +162,7 @@ jobs:
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - name: Install ld
-        run: apt-get install lld clang
+        run: apt-get update && apt-get install -y lld clang
       - name: Checkout repository
         uses: actions/checkout@v3
 
