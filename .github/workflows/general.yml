@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 env:
   CARGO_TERM_COLOR: always
-  POSTGRES_HOST: postgres
+  POSTGRES_HOSTNAME: postgres
 
 jobs:
   test:
