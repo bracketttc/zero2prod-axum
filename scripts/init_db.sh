@@ -26,7 +26,9 @@ done
 
 >&2 echo "Postgres is up and running on port ${POSTGRES_PORT} - running migrations now!"
 
-sqlx database create
-sqlx migrate run
+echo "${DATABASE_URL}"
+
+sqlx database create --database-url ${DATABASE_URL}
+sqlx migrate run --database-url ${DATABASE_URL}
 
 >&2 echo "Postgres has been migrated, ready to go!"
