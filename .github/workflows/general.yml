@@ -24,7 +24,7 @@ jobs:
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - name: Install ld
-        run: sudo apt-get install lld clang
+        run: apt-get install lld clang
       - uses: actions/checkout@v3
       - name: Cache dependencies
         id: cache-dependencies
@@ -63,7 +63,7 @@ jobs:
 
       - name: Migrate database
         run: |
-          sudo apt-get install -y postgresql-client
+          apt-get install -y postgresql-client
           ./scripts/init_db.sh
 
       - name: Run cargo test
@@ -105,7 +105,7 @@ jobs:
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - name: Install ld
-        run: sudo apt-get install lld clang
+        run: apt-get install lld clang
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
@@ -135,7 +135,7 @@ jobs:
 
       - name: Migrate database
         run: |
-          sudo apt-get install -y postgresql-client
+          apt-get install -y postgresql-client
           ./scripts/init_db.sh
 
       - name: Run clippy
@@ -162,7 +162,7 @@ jobs:
       SQLX_FEATURES: "rustls,postgres"
     steps:
       - name: Install ld
-        run: sudo apt-get install lld clang
+        run: apt-get install lld clang
       - name: Checkout repository
         uses: actions/checkout@v3
 
@@ -194,7 +194,7 @@ jobs:
 
       - name: Migrate database
         run: |
-          sudo apt-get install -y postgresql-client
+          apt-get install -y postgresql-client
           ./scripts/init_db.sh
 
       - name: Run cargo-tarpaulin
