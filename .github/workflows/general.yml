@@ -9,6 +9,7 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    container: ubuntu:latest
     services:
       postgres:
         image: postgres:13
@@ -73,6 +74,7 @@ jobs:
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
+    container: ubuntu:latest
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -88,6 +90,7 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+    container: ubuntu:latest
     services:
       postgres:
         image: postgres:13
@@ -144,6 +147,7 @@ jobs:
   coverage:
     name: Code coverage
     runs-on: ubuntu-latest
+    container: ubuntu:latest
     services:
       postgres:
         image: postgres:13
