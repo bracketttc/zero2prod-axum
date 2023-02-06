@@ -25,8 +25,8 @@ jobs:
       SQLX_VERSION: 0.6.2
       SQLX_FEATURES: "rustls,postgres"
     steps:
-      - name: Install ld
-        run: apt-get update && apt-get install -y lld clang curl
+      - name: Install build deps
+        run: apt-get update && apt-get install -y lld clang curl pkg-config libssl-dev
       - uses: actions/checkout@v3
       - name: Cache dependencies
         id: cache-dependencies
@@ -108,8 +108,8 @@ jobs:
       SQLX_VERSION: 0.6.2
       SQLX_FEATURES: "rustls,postgres"
     steps:
-      - name: Install ld
-        run: apt-get update && apt-get install -y lld clang curl
+      - name: Install build deps
+        run: apt-get update && apt-get install -y lld clang curl pkg-config libssl-dev
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
@@ -165,8 +165,8 @@ jobs:
       SQLX_VERSION: 0.6.2
       SQLX_FEATURES: "rustls,postgres"
     steps:
-      - name: Install ld
-        run: apt-get update && apt-get install -y lld clang curl
+      - name: Install build deps
+        run: apt-get update && apt-get install -y lld clang curl pkg-config libssl-dev
       - name: Checkout repository
         uses: actions/checkout@v3
 
