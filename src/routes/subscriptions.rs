@@ -1,4 +1,7 @@
-use crate::domain::{NewSubscriber, SubscriberEmail, SubscriberName};
+use crate::{
+    domain::{NewSubscriber, SubscriberEmail, SubscriberName},
+    startup::AppState,
+};
 use axum::{
     extract::{Form, State},
     http::StatusCode,
@@ -31,24 +34,46 @@ impl TryFrom<FormData> for NewSubscriber {
 // error output here is less than helpful.
 #[tracing::instrument(
     name = "Adding a new subscriber",
-    skip(connection_pool, form),
+    skip(state, form),
     fields(
         subscriber_email = %form.email,
         subscriber_name = %form.name
     )
 )]
 pub async fn subscribe(
-    State(connection_pool): State<Arc<PgPool>>,
+    State(state): State<Arc<AppState>>,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
+    let connection_pool = &state.connection_pool;
+    let email_client = &state.email_client;
+
     let new_subscriber = match form.try_into() {
         Ok(form) => form,
         Err(_) => return StatusCode::BAD_REQUEST,
     };
-    match insert_subscriber(&connection_pool, &new_subscriber).await {
-        Ok(_) => StatusCode::OK,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    if insert_subscriber(connection_pool, &new_subscriber)
+        .await
+        .is_err()
+    {
+        return StatusCode::INTERNAL_SERVER_ERROR;
     }
+
+    let confirmation_link = "https://my-api.com/subscriptions/confirm";
+    if email_client
+        .send_email(
+            new_subscriber.email,
+            "Welcome!",
+            &format!("Welcome to our newsletter!<br />\
+            Click <a href=\"{confirmation_link}\">here</a> to confirm your subscription."),
+            &format!("Welcome to our newsletter!\nVisit {confirmation_link} to confirm your subscription."),
+        )
+        .await
+        .is_err()
+    {
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+
+    StatusCode::OK
 }
 
 #[tracing::instrument(

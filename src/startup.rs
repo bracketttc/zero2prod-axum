@@ -14,6 +14,11 @@ pub struct Application {
     server: Server<AddrIncoming, IntoMakeService<Router>>,
 }
 
+pub struct AppState {
+    pub connection_pool: PgPool,
+    pub email_client: EmailClient,
+}
+
 impl Application {
     pub async fn build(configuration: Settings) -> Result<Self, std::io::Error> {
         let connection_pool = get_connection_pool(&configuration.database);
@@ -56,12 +61,12 @@ pub fn run(
     pool: PgPool,
     email_client: EmailClient,
 ) -> Server<AddrIncoming, IntoMakeService<Router>> {
+    let state = AppState { connection_pool: pool, email_client };
     let app = Router::new()
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
         .layer(opentelemetry_tracing_layer())
-        .with_state(Arc::new(pool))
-        .with_state(Arc::new(email_client));
+        .with_state(Arc::new(state));
     Server::from_tcp(listener)
         .expect("Failed to connect to socket")
         .serve(app.into_make_service())
