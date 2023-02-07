@@ -1,7 +1,7 @@
 use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
-    routes::{health_check, subscribe},
+    routes::{confirm, health_check, subscribe},
 };
 use axum::routing::{get, post, IntoMakeService, Router};
 use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
@@ -17,6 +17,7 @@ pub struct Application {
 pub struct AppState {
     pub connection_pool: PgPool,
     pub email_client: EmailClient,
+    pub base_url: String,
 }
 
 impl Application {
@@ -42,7 +43,12 @@ impl Application {
         //let socket: SocketAddr = address.parse().expect("Unable to parse socket address");
         let listener = TcpListener::bind(address).expect("Failed to bind port.");
         let port = listener.local_addr().unwrap().port();
-        let server = run(listener, connection_pool, email_client);
+        let server = run(
+            listener,
+            connection_pool,
+            email_client,
+            configuration.application.base_url,
+        );
 
         Ok(Self { port, server })
     }
@@ -60,11 +66,17 @@ pub fn run(
     listener: TcpListener,
     pool: PgPool,
     email_client: EmailClient,
+    base_url: String,
 ) -> Server<AddrIncoming, IntoMakeService<Router>> {
-    let state = AppState { connection_pool: pool, email_client };
+    let state = AppState {
+        connection_pool: pool,
+        email_client,
+        base_url,
+    };
     let app = Router::new()
         .route("/health_check", get(health_check))
         .route("/subscriptions", post(subscribe))
+        .route("/subscriptions/confirm", get(confirm))
         .layer(opentelemetry_tracing_layer())
         .with_state(Arc::new(state));
     Server::from_tcp(listener)
