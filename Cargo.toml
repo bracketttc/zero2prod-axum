@@ -15,7 +15,7 @@ name = "zero2prod"
 
 [dependencies]
 axum = { version = "0.6", features = ["tower-log"] }
-axum-tracing-opentelemetry = "0.8"
+axum-tracing-opentelemetry = "0.9"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 config = "0.13"
 hyper = { version = "0.14", features = ["server"] }
