@@ -1,4 +1,5 @@
-use crate::startup::AppState;
+use crate::{error_handling::error_chain_fmt, startup::AppState};
+use anyhow::Context;
 use axum::{
     extract::{Form, State},
     response::IntoResponse,
@@ -9,6 +10,37 @@ use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
 
+#[derive(thiserror::Error)]
+pub enum ConfirmError {
+    #[error(transparent)]
+    UnexpectedError(#[from] anyhow::Error),
+    #[error("There is no subscriber associated with the provided token.")]
+    UnknownToken,
+}
+
+impl std::fmt::Debug for ConfirmError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        error_chain_fmt(self, f)
+    }
+}
+
+impl IntoResponse for ConfirmError {
+    fn into_response(self) -> axum::response::Response {
+        let status = match self {
+            ConfirmError::UnexpectedError(_) => {
+                tracing::error!("{:?}", &self);
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+            ConfirmError::UnknownToken => {
+                tracing::warn!("{:?}", &self);
+                StatusCode::UNAUTHORIZED
+            }
+        };
+
+        (status, format!("{self}")).into_response()
+    }
+}
+
 #[derive(Deserialize)]
 pub struct Parameters {
     subscription_token: String,
@@ -18,26 +50,17 @@ pub struct Parameters {
 pub async fn confirm(
     State(state): State<Arc<AppState>>,
     Form(parameters): Form<Parameters>,
-) -> impl IntoResponse {
-    let id =
-        match get_subscriber_id_from_token(&state.connection_pool, &parameters.subscription_token)
+) -> Result<impl IntoResponse, ConfirmError> {
+    let subscriber_id =
+        get_subscriber_id_from_token(&state.connection_pool, &parameters.subscription_token)
             .await
-        {
-            Ok(id) => id,
-            Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
-        };
-    match id {
-        None => StatusCode::UNAUTHORIZED,
-        Some(subscriber_id) => {
-            if confirm_subscriber(&state.connection_pool, subscriber_id)
-                .await
-                .is_err()
-            {
-                return StatusCode::INTERNAL_SERVER_ERROR;
-            }
-            StatusCode::OK
-        }
-    }
+            .context("Failed to get subscriber id from the provided token.")?
+            .ok_or(ConfirmError::UnknownToken)?;
+
+    confirm_subscriber(&state.connection_pool, subscriber_id)
+        .await
+        .context("Failed to confirm subscriber")?;
+    Ok(StatusCode::OK)
 }
 
 #[tracing::instrument(name = "Mark subscriber as confirmed", skip(subscriber_id, pool))]
@@ -47,11 +70,7 @@ pub async fn confirm_subscriber(pool: &PgPool, subscriber_id: Uuid) -> Result<()
         subscriber_id,
     )
     .execute(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
     Ok(())
 }
 
@@ -66,10 +85,6 @@ pub async fn get_subscriber_id_from_token(
         subscription_token,
     )
     .fetch_optional(pool)
-    .await
-    .map_err(|e| {
-        tracing::error!("Failed to execute query: {:?}", e);
-        e
-    })?;
+    .await?;
     Ok(result.map(|r| r.subscriber_id))
 }

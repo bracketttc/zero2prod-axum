@@ -34,19 +34,18 @@ impl std::fmt::Debug for SubscribeError {
 impl IntoResponse for SubscribeError {
     fn into_response(self) -> axum::response::Response {
         let status = match self {
-            SubscribeError::ValidationError(_) => StatusCode::BAD_REQUEST,
-            SubscribeError::UnexpectedError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-        };
-        let body = match self {
-            SubscribeError::ValidationError(e) => e,
-            SubscribeError::UnexpectedError(e) => {
-                // Note that we're using the Debug format for the error, but returning the Display format for the body.
-                tracing::error!("{:?}", e);
-                format!("{e}")
+            SubscribeError::ValidationError(_) => {
+                tracing::warn!("{:?}", &self);
+                StatusCode::BAD_REQUEST
+            }
+            SubscribeError::UnexpectedError(_) => {
+                tracing::error!("{:?}", &self);
+                StatusCode::INTERNAL_SERVER_ERROR
             }
         };
+        // Note that we're using the Debug format for the error, but returning the Display format for the body.
 
-        (status, body).into_response()
+        (status, format!("{self}")).into_response()
     }
 }
 
