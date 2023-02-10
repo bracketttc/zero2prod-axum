@@ -1,7 +1,7 @@
 use crate::{
     domain::{NewSubscriber, SubscriberEmail, SubscriberName},
-    error_handling::error_chain_fmt,
     email_client::EmailClient,
+    error_handling::error_chain_fmt,
     startup::AppState,
 };
 use anyhow::Context;
