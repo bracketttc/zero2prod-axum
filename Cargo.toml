@@ -14,6 +14,7 @@ path = "src/main.rs"
 name = "zero2prod"
 
 [dependencies]
+anyhow = "1"
 axum = { version = "0.6", features = ["tower-log"] }
 axum-tracing-opentelemetry = "0.9"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
@@ -23,6 +24,7 @@ rand = { version = "0.8", features = ["std_rng"] }
 secrecy = { version = "0.8", features = ["serde"] }
 serde = { version = "1", features = ["derive"]}
 serde-aux = "4"
+thiserror = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-bunyan-formatter = "0.3"

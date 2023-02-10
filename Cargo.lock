@@ -2616,6 +2616,7 @@ dependencies = [
 name = "zero2prod-axum"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "axum",
  "axum-tracing-opentelemetry",
  "chrono",
@@ -2634,6 +2635,7 @@ dependencies = [
  "serde-aux",
  "serde_json",
  "sqlx",
+ "thiserror",
  "tokio",
  "tower-http",
  "tracing",
