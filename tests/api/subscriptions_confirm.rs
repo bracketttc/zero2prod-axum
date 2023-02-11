@@ -29,7 +29,7 @@ async fn the_link_returned_by_subscribe_returns_a_200_if_called() {
         .mount(&app.email_server)
         .await;
 
-    app.post_subscriptions(valid_request_body.into()).await;
+    app.post_subscriptions(valid_request_body().into()).await;
     let email_request = &app.email_server.received_requests().await.unwrap()[0];
     let confirmation_links = app.get_confirmation_links(email_request);
 
