@@ -1,7 +1,7 @@
 use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
-    routes::{confirm, health_check, subscribe},
+    routes::{confirm, health_check, publish_newsletter, subscribe},
 };
 use axum::routing::{get, post, IntoMakeService, Router};
 use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
@@ -75,6 +75,7 @@ pub fn run(
     };
     let app = Router::new()
         .route("/health_check", get(health_check))
+        .route("/newsletters", post(publish_newsletter))
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm))
         .layer(opentelemetry_tracing_layer())

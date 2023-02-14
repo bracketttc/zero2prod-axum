@@ -64,6 +64,15 @@ impl TestApp {
         let text = get_link(body["message"]["text"].as_str().unwrap());
         ConfirmationLinks { html, text }
     }
+
+    pub async fn post_newsletters(&self, body: serde_json::Value) -> reqwest::Response {
+        reqwest::Client::new()
+            .post(&format!("{}/newsletters", &self.host))
+            .json(&body)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
 }
 
 pub async fn spawn_app() -> TestApp {
