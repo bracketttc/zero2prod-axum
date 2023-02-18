@@ -12,10 +12,18 @@
 	},
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	"forwardPorts": [16686],
+	"forwardPorts": [8000, 16686],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
 	"postCreateCommand": ".devcontainer/postCreate.sh",
+	"portsAttributes": {
+		"8000": {
+			"label": "zero2prod"
+		},
+		"16686": {
+			"label": "jaeger-dashboard"
+		}
+	}
 
 	// Configure tool-specific properties.
 	// "customizations": {},
