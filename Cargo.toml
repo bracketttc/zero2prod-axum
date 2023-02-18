@@ -15,15 +15,21 @@ name = "zero2prod"
 
 [dependencies]
 anyhow = "1"
-axum = { version = "0.6", features = ["tower-log"] }
+argon2 = { version ="0.4", features = ["std"] }
+axum = { version = "0.6", features = ["headers", "macros", "tower-log"] }
 axum-tracing-opentelemetry = "0.9"
+base64 = "0.21"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 config = "0.13"
+hex = "0.4"
+hmac = { version = "0.12", features = ["std"] }
+htmlescape = "0.3"
 hyper = { version = "0.14", features = ["server"] }
 rand = { version = "0.8", features = ["std_rng"] }
 secrecy = { version = "0.8", features = ["serde"] }
 serde = { version = "1", features = ["derive"]}
 serde-aux = "4"
+sha2 = "0.10"
 thiserror = "1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1", features = ["log"] }
@@ -33,6 +39,7 @@ tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 tower-http = { version = "0.3", features = ["trace"] }
 unicode-segmentation = "1"
+urlencoding = "2"
 uuid = { version = "1", features = ["v4"] }
 validator = "0.16"
 

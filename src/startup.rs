@@ -1,23 +1,40 @@
 use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
-    routes::{confirm, health_check, publish_newsletter, subscribe},
+    routes::{confirm, health_check, home, login, login_form, publish_newsletter, subscribe},
 };
-use axum::routing::{get, post, IntoMakeService, Router};
+use axum::{
+    extract::FromRef,
+    routing::{get, post, IntoMakeService, Router},
+};
 use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 use hyper::{server::conn::AddrIncoming, Server};
+use secrecy::Secret;
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::{net::TcpListener, sync::Arc};
+use std::{net::TcpListener, ops::Deref, sync::Arc};
 
 pub struct Application {
     port: u16,
     server: Server<AddrIncoming, IntoMakeService<Router>>,
 }
 
+#[derive(Clone)]
+pub struct HmacSecret(pub Secret<String>);
+
+impl Deref for HmacSecret {
+    type Target = Secret<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Clone, FromRef)]
 pub struct AppState {
-    pub connection_pool: PgPool,
-    pub email_client: EmailClient,
+    pub connection_pool: Arc<PgPool>,
+    pub email_client: Arc<EmailClient>,
     pub base_url: String,
+    pub hmac_secret: HmacSecret,
 }
 
 impl Application {
@@ -48,6 +65,7 @@ impl Application {
             connection_pool,
             email_client,
             configuration.application.base_url,
+            HmacSecret(configuration.application.hmac_secret),
         );
 
         Ok(Self { port, server })
@@ -67,19 +85,24 @@ pub fn run(
     pool: PgPool,
     email_client: EmailClient,
     base_url: String,
+    hmac_secret: HmacSecret,
 ) -> Server<AddrIncoming, IntoMakeService<Router>> {
     let state = AppState {
-        connection_pool: pool,
-        email_client,
+        connection_pool: Arc::new(pool),
+        email_client: Arc::new(email_client),
         base_url,
+        hmac_secret,
     };
     let app = Router::new()
+        .route("/", get(home))
         .route("/health_check", get(health_check))
+        .route("/login", get(login_form))
+        .route("/login", post(login))
         .route("/newsletters", post(publish_newsletter))
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm))
         .layer(opentelemetry_tracing_layer())
-        .with_state(Arc::new(state));
+        .with_state(state);
     Server::from_tcp(listener)
         .expect("Failed to connect to socket")
         .serve(app.into_make_service())

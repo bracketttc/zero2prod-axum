@@ -14,7 +14,6 @@ use chrono::Utc;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::Deserialize;
 use sqlx::{Postgres, Transaction};
-use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(thiserror::Error)]
@@ -77,7 +76,7 @@ impl TryFrom<FormData> for NewSubscriber {
     )
 )]
 pub async fn subscribe(
-    State(state): State<Arc<AppState>>,
+    State(state): State<AppState>,
     Form(form): Form<FormData>,
 ) -> Result<impl IntoResponse, SubscribeError> {
     let connection_pool = &state.connection_pool;

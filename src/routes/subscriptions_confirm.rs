@@ -1,4 +1,4 @@
-use crate::{error_handling::error_chain_fmt, startup::AppState};
+use crate::error_handling::error_chain_fmt;
 use anyhow::Context;
 use axum::{
     extract::{Form, State},
@@ -46,18 +46,17 @@ pub struct Parameters {
     subscription_token: String,
 }
 
-#[tracing::instrument(name = "Confirm a pending subscriber", skip(state, parameters))]
+#[tracing::instrument(name = "Confirm a pending subscriber", skip(pool, parameters))]
 pub async fn confirm(
-    State(state): State<Arc<AppState>>,
+    State(pool): State<Arc<PgPool>>,
     Form(parameters): Form<Parameters>,
 ) -> Result<impl IntoResponse, ConfirmError> {
-    let subscriber_id =
-        get_subscriber_id_from_token(&state.connection_pool, &parameters.subscription_token)
-            .await
-            .context("Failed to get subscriber id from the provided token.")?
-            .ok_or(ConfirmError::UnknownToken)?;
+    let subscriber_id = get_subscriber_id_from_token(&pool, &parameters.subscription_token)
+        .await
+        .context("Failed to get subscriber id from the provided token.")?
+        .ok_or(ConfirmError::UnknownToken)?;
 
-    confirm_subscriber(&state.connection_pool, subscriber_id)
+    confirm_subscriber(&pool, subscriber_id)
         .await
         .context("Failed to confirm subscriber")?;
     Ok(StatusCode::OK)
