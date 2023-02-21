@@ -7,9 +7,10 @@ use axum::{
     extract::FromRef,
     routing::{get, post, IntoMakeService, Router},
 };
+use axum_flash::Key;
 use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 use hyper::{server::conn::AddrIncoming, Server};
-use secrecy::Secret;
+use secrecy::{ExposeSecret, Secret};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::{net::TcpListener, ops::Deref, sync::Arc};
 
@@ -34,7 +35,7 @@ pub struct AppState {
     pub connection_pool: Arc<PgPool>,
     pub email_client: Arc<EmailClient>,
     pub base_url: String,
-    pub hmac_secret: HmacSecret,
+    pub flash_config: axum_flash::Config,
 }
 
 impl Application {
@@ -57,7 +58,7 @@ impl Application {
             "{}:{}",
             configuration.application.host, configuration.application.port
         );
-        //let socket: SocketAddr = address.parse().expect("Unable to parse socket address");
+
         let listener = TcpListener::bind(address).expect("Failed to bind port.");
         let port = listener.local_addr().unwrap().port();
         let server = run(
@@ -65,7 +66,13 @@ impl Application {
             connection_pool,
             email_client,
             configuration.application.base_url,
-            HmacSecret(configuration.application.hmac_secret),
+            axum_flash::Config::new(Key::from(
+                configuration
+                    .application
+                    .hmac_secret
+                    .expose_secret()
+                    .as_bytes(),
+            )),
         );
 
         Ok(Self { port, server })
@@ -85,13 +92,13 @@ pub fn run(
     pool: PgPool,
     email_client: EmailClient,
     base_url: String,
-    hmac_secret: HmacSecret,
+    flash_config: axum_flash::Config,
 ) -> Server<AddrIncoming, IntoMakeService<Router>> {
     let state = AppState {
         connection_pool: Arc::new(pool),
         email_client: Arc::new(email_client),
         base_url,
-        hmac_secret,
+        flash_config,
     };
     let app = Router::new()
         .route("/", get(home))

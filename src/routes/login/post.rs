@@ -1,14 +1,13 @@
 use crate::{
     authentication::{validate_credentials, AuthError, Credentials},
     error_handling::error_chain_fmt,
-    startup::HmacSecret,
 };
 use axum::{
     extract::{Form, State},
     response::{IntoResponse, Redirect},
 };
-use hmac::{Hmac, Mac};
-use secrecy::{ExposeSecret, Secret};
+use axum_flash::Flash;
+use secrecy::Secret;
 use sqlx::PgPool;
 use std::sync::Arc;
 
@@ -40,25 +39,17 @@ impl IntoResponse for LoginError {
         };
 
         let query_string = format!("error={}", urlencoding::Encoded::new(self.to_string()));
-        /*
-        let secret: &[u8] = todo!();
-        let hmac_tag = {
-            let mut mac = Hmac::<sha2::Sha256>::new_from_slice(secret).unwrap();
-            mac.update(query_string.as_bytes());
-            mac.finalize().into_bytes()
-        };
-        */
         Redirect::to(format!("/login?{query_string}").as_str()).into_response()
     }
 }
 
 #[tracing::instrument(
-    skip(pool, hmac_secret, form),
+    skip(pool, flash, form),
     fields(username=tracing::field::Empty, user_id=tracing::field::Empty)
 )]
 pub async fn login(
     State(pool): State<Arc<PgPool>>,
-    State(hmac_secret): State<HmacSecret>,
+    flash: Flash,
     Form(form): Form<FormData>,
 ) -> impl IntoResponse {
     let credentials = Credentials {
@@ -70,21 +61,19 @@ pub async fn login(
     match validate_credentials(credentials, &pool).await {
         Ok(user_id) => {
             tracing::Span::current().record("user_id", &tracing::field::display(&user_id));
-            Redirect::to("/")
+            Redirect::to("/").into_response()
         }
         Err(e) => {
             let e = match e {
                 AuthError::InvalidCredentials(_) => LoginError::AuthError(e.into()),
                 AuthError::UnexpectedError(_) => LoginError::UnexpectedError(e.into()),
             };
-            let query_string = format!("error={}", urlencoding::Encoded::new(e.to_string()));
-            let secret = hmac_secret.expose_secret().as_bytes();
-            let hmac_tag = {
-                let mut mac = Hmac::<sha2::Sha256>::new_from_slice(secret).unwrap();
-                mac.update(query_string.as_bytes());
-                mac.finalize().into_bytes()
-            };
-            Redirect::to(format!("/login?{query_string}&tag={hmac_tag:x}").as_str())
+
+            (
+                flash.error(format!("{e}")),
+                Redirect::to("/login")
+            )
+            .into_response()
         }
     }
 }

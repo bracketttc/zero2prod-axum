@@ -17,14 +17,16 @@ name = "zero2prod"
 anyhow = "1"
 argon2 = { version ="0.4", features = ["std"] }
 axum = { version = "0.6", features = ["headers", "macros", "tower-log"] }
+axum-flash = "0.6"
+axum-sessions = "0.4"
 axum-tracing-opentelemetry = "0.9"
 base64 = "0.21"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 config = "0.13"
 hex = "0.4"
 hmac = { version = "0.12", features = ["std"] }
-htmlescape = "0.3"
 hyper = { version = "0.14", features = ["server"] }
+itertools = "0.10"
 rand = { version = "0.8", features = ["std_rng"] }
 secrecy = { version = "0.8", features = ["serde"] }
 serde = { version = "1", features = ["derive"]}
@@ -46,7 +48,7 @@ validator = "0.16"
 [dependencies.reqwest]
 version = "0.11"
 default-features = false
-features = ["json", "rustls-tls"]
+features = ["cookies", "json", "rustls-tls"]
 
 [dependencies.sqlx]
 version = "0.6"

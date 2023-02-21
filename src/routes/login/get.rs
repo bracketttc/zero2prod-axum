@@ -1,52 +1,22 @@
-use crate::startup::HmacSecret;
 use axum::{
-    extract::{Query, State},
     http::StatusCode,
     response::{Html, IntoResponse},
 };
-use hmac::{Hmac, Mac};
-use secrecy::ExposeSecret;
+use axum_flash::IncomingFlashes;
+use std::fmt::Write;
 
-#[derive(serde::Deserialize)]
-pub struct QueryParams {
-    error: String,
-    tag: String,
-}
-
-impl QueryParams {
-    fn verify(self, secret: &HmacSecret) -> Result<String, anyhow::Error> {
-        let tag = hex::decode(self.tag)?;
-        let query_string = format!("error={}", urlencoding::Encoded::new(&self.error));
-
-        let mut mac =
-            Hmac::<sha2::Sha256>::new_from_slice(secret.expose_secret().as_bytes()).unwrap();
-        mac.update(query_string.as_bytes());
-        mac.verify_slice(&tag)?;
-
-        Ok(self.error)
+pub async fn login_form(flashes: IncomingFlashes) -> impl IntoResponse {
+    let mut error_html = String::new();
+    for (_, text) in flashes
+        .iter()
+        .filter(|(level, _)| level == &axum_flash::Level::Error)
+    {
+        writeln!(error_html, "<p><i>{text}</i></p>").unwrap();
     }
-}
 
-pub async fn login_form(
-    State(hmac_secret): State<HmacSecret>,
-    query: Option<Query<QueryParams>>,
-) -> impl IntoResponse {
-    let error_html = match query {
-        None => "".into(),
-        Some(query) => match query.0.verify(&hmac_secret) {
-            Ok(error) => {
-                format!("<p><i>{}</i></p>", htmlescape::encode_minimal(&error))
-            }
-            Err(e) => {
-                tracing::warn!(error.message = %e,
-                error.cause_chain = ?e,
-                "Failed to verify query parameters using the HMAC tag");
-                "".into()
-            }
-        },
-    };
     (
         StatusCode::OK,
+        flashes,
         Html(format!(
             r#"<!DOCTYPE html>
         <html lang="en">
