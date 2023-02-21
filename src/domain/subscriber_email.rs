@@ -71,4 +71,11 @@ mod tests {
         let email = "@domain.com".to_string();
         assert_err!(SubscriberEmail::parse(email));
     }
+
+    #[test]
+    fn display_works_as_expected() {
+        let email = "ursula_le_guin@domain.com".to_string();
+        let subscriber = SubscriberEmail::parse(email.clone());
+        assert_eq!(email, format!("{}", subscriber.unwrap()))
+    }
 }
