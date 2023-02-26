@@ -1,9 +1,11 @@
+#![forbid(unsafe_code)]
+
 use zero2prod_axum::configuration::get_configuration;
 use zero2prod_axum::startup::Application;
 use zero2prod_axum::telemetry::{get_subscriber, init_subscriber};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     let subscriber = get_subscriber("zero2prod_axum".into(), "info".into(), std::io::stdout);
     init_subscriber(subscriber);
 

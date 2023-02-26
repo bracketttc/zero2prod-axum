@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use unicode_segmentation::UnicodeSegmentation; // provides `graphemes()` impl for `String` and `&str`
 
 #[derive(Debug)]
@@ -7,7 +8,7 @@ impl SubscriberName {
     /// Returns an instance of `SubscriberName` if the input satisfies all
     /// our validation constraints on subscriber names.
     /// It panics otherwise.
-    pub fn parse(s: String) -> Result<SubscriberName, String> {
+    pub fn parse(s: String) -> Result<SubscriberName, anyhow::Error> {
         // `.trim()` retuns a view over the input `s` without trailing
         // whitespace-like characters.
         // `.is_empty()` checks if the view contains any character.
@@ -28,7 +29,7 @@ impl SubscriberName {
         let contains_forbidden_characters = s.chars().any(|g| forbidden_characters.contains(&g));
 
         if is_empty_or_whitespace || is_too_long || contains_forbidden_characters {
-            Err(format!("{s} is not a valid subscriber name."))
+            Err(anyhow!("{s} is not a valid subscriber name."))
         } else {
             Ok(Self(s))
         }

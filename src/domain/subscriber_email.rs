@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use validator::validate_email;
 
 #[derive(Debug)]
@@ -7,11 +8,11 @@ impl SubscriberEmail {
     /// Returns an instance of `SubscriberName` if the input satisfies all
     /// our validation constraints on subscriber names.
     /// It panics otherwise.
-    pub fn parse(s: String) -> Result<SubscriberEmail, String> {
+    pub fn parse(s: String) -> Result<SubscriberEmail, anyhow::Error> {
         if validate_email(&s) {
             Ok(Self(s))
         } else {
-            Err(format!("{s} is not a valid subscriber email."))
+            Err(anyhow!("{s} is not a valid subscriber email."))
         }
     }
 }

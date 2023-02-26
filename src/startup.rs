@@ -1,33 +1,29 @@
 use crate::{
+    authentication::reject_anonymous_users,
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
-    routes::{confirm, health_check, home, login, login_form, publish_newsletter, subscribe},
+    routes::{
+        admin_dashboard, change_password, change_password_form, confirm, health_check, home, login,
+        login_form, publish_newsletter, subscribe, log_out,
+    },
 };
+use async_redis_session::RedisSessionStore;
 use axum::{
     extract::FromRef,
+    middleware::from_fn,
     routing::{get, post, IntoMakeService, Router},
 };
 use axum_flash::Key;
+use axum_sessions::{SessionLayer};
 use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 use hyper::{server::conn::AddrIncoming, Server};
 use secrecy::{ExposeSecret, Secret};
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use std::{net::TcpListener, ops::Deref, sync::Arc};
+use std::{net::TcpListener, sync::Arc};
 
 pub struct Application {
     port: u16,
     server: Server<AddrIncoming, IntoMakeService<Router>>,
-}
-
-#[derive(Clone)]
-pub struct HmacSecret(pub Secret<String>);
-
-impl Deref for HmacSecret {
-    type Target = Secret<String>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
 }
 
 #[derive(Clone, FromRef)]
@@ -39,7 +35,7 @@ pub struct AppState {
 }
 
 impl Application {
-    pub async fn build(configuration: Settings) -> Result<Self, std::io::Error> {
+    pub async fn build(configuration: Settings) -> Result<Self, anyhow::Error> {
         let connection_pool = get_connection_pool(&configuration.database);
 
         let sender_email = configuration
@@ -66,13 +62,8 @@ impl Application {
             connection_pool,
             email_client,
             configuration.application.base_url,
-            axum_flash::Config::new(Key::from(
-                configuration
-                    .application
-                    .hmac_secret
-                    .expose_secret()
-                    .as_bytes(),
-            )),
+            configuration.application.hmac_secret,
+            configuration.redis_uri,
         );
 
         Ok(Self { port, server })
@@ -92,22 +83,36 @@ pub fn run(
     pool: PgPool,
     email_client: EmailClient,
     base_url: String,
-    flash_config: axum_flash::Config,
+    hmac_secret: Secret<String>,
+    redis_uri: Secret<String>,
 ) -> Server<AddrIncoming, IntoMakeService<Router>> {
     let state = AppState {
         connection_pool: Arc::new(pool),
         email_client: Arc::new(email_client),
         base_url,
-        flash_config,
+        flash_config: axum_flash::Config::new(Key::from(hmac_secret.expose_secret().as_bytes())),
     };
+
+    // Redis store vs. local in-memory store
+    let store = RedisSessionStore::new(redis_uri.expose_secret().to_string()).unwrap();
+    //let store = MemoryStore::new();
+    let session_layer = SessionLayer::new(store, hmac_secret.expose_secret().as_bytes());
+
     let app = Router::new()
+        .route("/admin/dashboard", get(admin_dashboard))
+        .route("/admin/logout", post(log_out))
+        .route("/admin/password", get(change_password_form))
+        .route("/admin/password", post(change_password))
+        .layer(from_fn(reject_anonymous_users))
+        .route("/newsletters", post(publish_newsletter))
         .route("/", get(home))
         .route("/health_check", get(health_check))
         .route("/login", get(login_form))
         .route("/login", post(login))
-        .route("/newsletters", post(publish_newsletter))
+        
         .route("/subscriptions", post(subscribe))
         .route("/subscriptions/confirm", get(confirm))
+        .layer(session_layer)
         .layer(opentelemetry_tracing_layer())
         .with_state(state);
     Server::from_tcp(listener)

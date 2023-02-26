@@ -12,3 +12,4 @@ email_client:
   sender_email: "test@gmail.com"
   api_key: "my-secret-token"
   timeout_milliseconds: 10000
+redis_uri: "redis://redis:6379"

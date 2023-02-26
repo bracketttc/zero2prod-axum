@@ -13,6 +13,7 @@ pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
     pub email_client: EmailClientSettings,
+    pub redis_uri: Secret<String>,
 }
 
 #[derive(Clone, Deserialize)]
@@ -66,7 +67,7 @@ impl DatabaseSettings {
 }
 
 impl EmailClientSettings {
-    pub fn sender(&self) -> Result<SubscriberEmail, String> {
+    pub fn sender(&self) -> Result<SubscriberEmail, anyhow::Error> {
         SubscriberEmail::parse(self.sender_email.clone())
     }
 

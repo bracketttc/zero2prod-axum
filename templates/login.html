@@ -7,6 +7,9 @@
 </head>
 
 <body>
+    {% for (_, flash) in flashes %}
+    <p><i>{{ flash }}</i></p>
+    {% endfor %}
     <form action="/login" method="post">
         <label>Username
             <input type="text" placeholder="Enter Username" name="username">
