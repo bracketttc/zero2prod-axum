@@ -21,7 +21,7 @@ async-redis-session = "0.2.2"
 axum = { version = "0.6", features = ["headers", "macros", "tower-log"] }
 axum-flash = "0.6"
 axum-sessions = "0.4"
-axum-tracing-opentelemetry = "0.9"
+axum-tracing-opentelemetry = "0.10"
 base64 = "0.21"
 chrono = { version = "0.4", default-features = false, features = ["clock"] }
 config = "0.13"
@@ -44,9 +44,8 @@ tracing-bunyan-formatter = "0.3"
 #tracing-error = "0.2"
 tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
-tower-http = { version = "0.3", features = ["trace"] }
+tower-http = { version = "0.4", features = ["trace"] }
 unicode-segmentation = "1"
-urlencoding = "2"
 uuid = { version = "1", features = ["serde", "v4"] }
 validator = "0.16"
 
