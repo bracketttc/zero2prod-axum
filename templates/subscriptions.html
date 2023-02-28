@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <title>Subscribe</title>
+</head>
+
+<body>
+    {% for (_, flash) in flashes %}
+    <p><i>{{ flash }}</i></p>
+    {% endfor %}
+    <form action="/subscriptions" method="post">
+        <label>Email
+            <input type="email" placeholder="Enter Email" name="email">
+        </label>
+
+        <label>Name
+            <input type="text" placeholder="Enter Name" name="name">
+        </label>
+
+        <button type="submit">Login</button>
+    </form>
+</body>
+
+</html>

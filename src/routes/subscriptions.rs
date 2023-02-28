@@ -5,11 +5,13 @@ use crate::{
     startup::AppState,
 };
 use anyhow::Context;
+use askama::Template;
 use axum::{
     extract::{Form, State},
     http::StatusCode,
-    response::IntoResponse,
+    response::{Html, IntoResponse, Response},
 };
+use axum_flash::IncomingFlashes;
 use chrono::Utc;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::Deserialize;
@@ -62,6 +64,17 @@ impl TryFrom<FormData> for NewSubscriber {
         let email = SubscriberEmail::parse(value.email)?;
         Ok(Self { email, name })
     }
+}
+
+#[derive(Template)]
+#[template(path = "subscriptions.html")]
+struct SubscribeForm<'a> {
+    flashes: &'a IncomingFlashes,
+}
+
+pub async fn subscribe_form(flashes: IncomingFlashes) -> Response {
+    let page = SubscribeForm { flashes: &flashes }.render().unwrap();
+    (flashes, Html(page)).into_response()
 }
 
 // Form type is an extractor that works on the body of the request and

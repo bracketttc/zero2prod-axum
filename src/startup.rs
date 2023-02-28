@@ -4,7 +4,7 @@ use crate::{
     email_client::EmailClient,
     routes::{
         admin_dashboard, change_password, change_password_form, confirm, health_check, home,
-        log_out, login, login_form, newsletter_form, publish_newsletter, subscribe,
+        log_out, login, login_form, newsletter_form, publish_newsletter, subscribe, subscribe_form,
     },
 };
 use async_redis_session::RedisSessionStore;
@@ -101,16 +101,13 @@ pub fn run(
     let app = Router::new()
         .route("/admin/dashboard", get(admin_dashboard))
         .route("/admin/logout", post(log_out))
-        .route("/admin/password", get(change_password_form))
-        .route("/admin/password", post(change_password))
-        .route("/admin/newsletter", get(newsletter_form))
-        .route("/admin/newsletter", post(publish_newsletter))
+        .route("/admin/password", get(change_password_form).post(change_password))
+        .route("/admin/newsletter", get(newsletter_form).post(publish_newsletter))
         .layer(from_fn(reject_anonymous_users))
         .route("/", get(home))
         .route("/health_check", get(health_check))
-        .route("/login", get(login_form))
-        .route("/login", post(login))
-        .route("/subscriptions", post(subscribe))
+        .route("/login", get(login_form).post(login))
+        .route("/subscriptions", get(subscribe_form).post(subscribe))
         .route("/subscriptions/confirm", get(confirm))
         .layer(session_layer)
         .layer(opentelemetry_tracing_layer())
