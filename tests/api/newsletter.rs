@@ -109,7 +109,8 @@ async fn newsletters_returns_400_for_invalid_data() {
 async fn requests_prior_to_login_redirect_to_login() {
     let app = spawn_app().await;
 
-    let response = app.post_newsletters(&serde_json::json!({
+    let response = app
+        .post_newsletters(&serde_json::json!({
             "title": "Newsletter title",
             "text": "Newsletter body as plain text",
             "html": "<p>Newsletter body as HTML</p>",

@@ -146,11 +146,13 @@ async fn changing_password_works() {
     assert_is_redirect_to(&response, "/admin/dashboard");
 
     // Change password
-    let response = app.post_change_password(&serde_json::json!({
-        "current_password": &app.test_user.password,
-        "new_password": &new_password,
-        "new_password_check": &new_password,
-    })).await;
+    let response = app
+        .post_change_password(&serde_json::json!({
+            "current_password": &app.test_user.password,
+            "new_password": &new_password,
+            "new_password_check": &new_password,
+        }))
+        .await;
     assert_is_redirect_to(&response, "/admin/password");
 
     // Follow the redirect

@@ -1,22 +1,20 @@
 use crate::{
-    authentication::{validate_credentials, AuthError, Credentials, self, UserId},
+    authentication::{self, validate_credentials, AuthError, Credentials, UserId},
     domain::Password,
     error_handling::error_chain_fmt,
     routes::admin::dashboard::get_username,
 };
 use anyhow::Context;
 use axum::{
-    Extension,
     extract::State,
     http::StatusCode,
     response::{IntoResponse, Redirect, Response},
-    Form,
+    Extension, Form,
 };
 use axum_flash::Flash;
 use secrecy::{ExposeSecret, Secret};
 use sqlx::PgPool;
 use std::sync::Arc;
-
 
 #[derive(thiserror::Error)]
 pub enum ChangePasswordError {
@@ -69,7 +67,9 @@ pub async fn change_password(
     let new_password = match Password::parse(form.new_password) {
         Ok(password) => password,
         Err(e) => {
-            return Ok((flash.error(format!("{e}")), Redirect::to("/admin/password")).into_response());
+            return Ok(
+                (flash.error(format!("{e}")), Redirect::to("/admin/password")).into_response(),
+            );
         }
     };
 
@@ -95,8 +95,7 @@ pub async fn change_password(
 
     authentication::change_password(**user_id, new_password, &pool)
         .await
-        .context("Failed to update user password")
-        ?;
+        .context("Failed to update user password")?;
 
     Ok((
         flash.info("Your password has been changed."),

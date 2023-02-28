@@ -3,8 +3,8 @@ use crate::{
     configuration::{DatabaseSettings, Settings},
     email_client::EmailClient,
     routes::{
-        admin_dashboard, change_password, change_password_form, confirm, health_check, home, login,
-        login_form, publish_newsletter, subscribe, log_out,
+        admin_dashboard, change_password, change_password_form, confirm, health_check, home,
+        log_out, login, login_form, newsletter_form, publish_newsletter, subscribe,
     },
 };
 use async_redis_session::RedisSessionStore;
@@ -14,7 +14,7 @@ use axum::{
     routing::{get, post, IntoMakeService, Router},
 };
 use axum_flash::Key;
-use axum_sessions::{SessionLayer};
+use axum_sessions::SessionLayer;
 use axum_tracing_opentelemetry::opentelemetry_tracing_layer;
 use hyper::{server::conn::AddrIncoming, Server};
 use secrecy::{ExposeSecret, Secret};
@@ -103,7 +103,8 @@ pub fn run(
         .route("/admin/logout", post(log_out))
         .route("/admin/password", get(change_password_form))
         .route("/admin/password", post(change_password))
-        .route("/newsletters", post(publish_newsletter))
+        .route("/admin/newsletter", get(newsletter_form))
+        .route("/admin/newsletter", post(publish_newsletter))
         .layer(from_fn(reject_anonymous_users))
         .route("/", get(home))
         .route("/health_check", get(health_check))

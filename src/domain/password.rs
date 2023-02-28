@@ -36,6 +36,8 @@ mod tests {
 
     #[test]
     fn passwords_shorter_than_12_characters_are_rejected() {
-        assert_err!(Password::parse(Secret::new(fake::faker::internet::en::Password(1..11).fake())));
+        assert_err!(Password::parse(Secret::new(
+            fake::faker::internet::en::Password(1..11).fake()
+        )));
     }
 }

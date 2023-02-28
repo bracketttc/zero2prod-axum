@@ -112,7 +112,7 @@ impl TestApp {
         Body: serde::Serialize,
     {
         self.api_client
-            .post(&format!("{}/newsletters", &self.host))
+            .post(&format!("{}/admin/newsletter", &self.host))
             .form(body)
             .send()
             .await

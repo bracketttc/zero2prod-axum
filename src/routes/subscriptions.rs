@@ -206,7 +206,7 @@ impl std::fmt::Display for StoreTokenError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "A database failure was encountered while trying to store a subscription toekn."
+            "A database failure was encountered while trying to store a subscription token."
         )
     }
 }

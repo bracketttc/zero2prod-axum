@@ -1,5 +1,8 @@
-use crate::{session_state::TypedSession, authentication::UserId};
-use axum::{response::{IntoResponse, Redirect, Response}, Extension};
+use crate::{authentication::UserId, session_state::TypedSession};
+use axum::{
+    response::{IntoResponse, Redirect, Response},
+    Extension,
+};
 use axum_flash::Flash;
 
 pub async fn log_out(
@@ -8,5 +11,9 @@ pub async fn log_out(
     _user_id: Extension<UserId>,
 ) -> Response {
     session.log_out();
-    (flash.info("You have successfully logged out."), Redirect::to("/login")).into_response()
+    (
+        flash.info("You have successfully logged out."),
+        Redirect::to("/login"),
+    )
+        .into_response()
 }
