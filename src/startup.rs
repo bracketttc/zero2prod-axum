@@ -101,8 +101,14 @@ pub fn run(
     let app = Router::new()
         .route("/admin/dashboard", get(admin_dashboard))
         .route("/admin/logout", post(log_out))
-        .route("/admin/password", get(change_password_form).post(change_password))
-        .route("/admin/newsletter", get(newsletter_form).post(publish_newsletter))
+        .route(
+            "/admin/password",
+            get(change_password_form).post(change_password),
+        )
+        .route(
+            "/admin/newsletter",
+            get(newsletter_form).post(publish_newsletter),
+        )
         .layer(from_fn(reject_anonymous_users))
         .route("/", get(home))
         .route("/health_check", get(health_check))

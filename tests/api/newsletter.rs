@@ -16,23 +16,18 @@ async fn newsletters_are_not_delivered_to_unconfirmed_subscribers() {
         .await;
 
     // login
-    let response = app
-        .post_login(&serde_json::json!({
-            "username": &app.test_user.username,
-            "password": &app.test_user.password,
-        }))
-        .await;
-    assert_is_redirect_to(&response, "/admin/dashboard");
+    app.test_user.login(&app).await;
 
     let newsletter_request_body = serde_json::json!({
         "title": "Newsletter title",
         "text": "Newsletter body as plain text",
         "html": "<p>Newsletter body as HTML</p>",
     });
-    let response = app.post_newsletters(&newsletter_request_body).await;
+    let response = app.post_publish_newsletter(&newsletter_request_body).await;
+    assert_is_redirect_to(&response, "/admin/newsletter");
 
-    assert_eq!(response.status().as_u16(), 200);
-
+    let html_page = app.get_publish_newsletter_html().await;
+    assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
     // Mock verifies on drop that we haven't sent the newsletter email
 }
 
@@ -49,22 +44,18 @@ async fn newsletters_are_delivered_to_confirmed_subscribers() {
         .await;
 
     // login
-    let response = app
-        .post_login(&serde_json::json!({
-            "username": &app.test_user.username,
-            "password": &app.test_user.password,
-        }))
-        .await;
-    assert_is_redirect_to(&response, "/admin/dashboard");
+    app.test_user.login(&app).await;
 
     let newsletter_request_body = serde_json::json!({
         "title": "Newsletter title",
         "text": "Newsletter body as plain text",
         "html": "<p>Newsletter body as HTML</p>",
     });
-    let response = app.post_newsletters(&newsletter_request_body).await;
+    let response = app.post_publish_newsletter(&newsletter_request_body).await;
+    assert_is_redirect_to(&response, "/admin/newsletter");
 
-    assert_eq!(response.status().as_u16(), 200);
+    let html_page = app.get_publish_newsletter_html().await;
+    assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
     // Mock verifies on drop that we have sent the newsletter email
 }
 
@@ -86,16 +77,10 @@ async fn newsletters_returns_400_for_invalid_data() {
     ];
 
     // login
-    let response = app
-        .post_login(&serde_json::json!({
-            "username": &app.test_user.username,
-            "password": &app.test_user.password,
-        }))
-        .await;
-    assert_is_redirect_to(&response, "/admin/dashboard");
+    app.test_user.login(&app).await;
 
     for (invalid_body, error_message) in test_cases {
-        let response = app.post_newsletters(&invalid_body).await;
+        let response = app.post_publish_newsletter(&invalid_body).await;
 
         assert_eq!(
             response.status().as_u16(),
@@ -110,7 +95,7 @@ async fn requests_prior_to_login_redirect_to_login() {
     let app = spawn_app().await;
 
     let response = app
-        .post_newsletters(&serde_json::json!({
+        .post_publish_newsletter(&serde_json::json!({
             "title": "Newsletter title",
             "text": "Newsletter body as plain text",
             "html": "<p>Newsletter body as HTML</p>",
@@ -154,4 +139,36 @@ async fn create_confirmed_subscriber(app: &TestApp) {
         .unwrap()
         .error_for_status()
         .unwrap();
+}
+
+#[tokio::test]
+async fn newsletter_creation_is_idempotent() {
+    let app = spawn_app().await;
+    create_confirmed_subscriber(&app).await;
+    app.test_user.login(&app).await;
+
+    Mock::given(any())
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
+    let newsletter_request_body = serde_json::json!({
+        "title": "Newsletter title",
+        "html": "<p>Newsletter body as HTML</p>",
+        "text": "Newsletter body as plain text",
+        "idempotency_key": uuid::Uuid::new_v4().to_string(),
+    });
+    let response = app.post_publish_newsletter(&newsletter_request_body).await;
+    assert_is_redirect_to(&response, "/admin/newsletter");
+
+    let html_page = app.get_publish_newsletter_html().await;
+    assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"));
+
+    let response = app.post_publish_newsletter(&newsletter_request_body).await;
+    assert_is_redirect_to(&response, "/admin/newsletter");
+
+    let html_page = app.get_publish_newsletter_html().await;
+    assert!(html_page.contains("<p><i>The newsletter issue has been published!</i></p>"))
 }

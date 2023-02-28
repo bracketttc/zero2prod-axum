@@ -9,10 +9,11 @@ use axum::{
         header::{HeaderMap, HeaderValue},
         StatusCode,
     },
-    response::IntoResponse,
+    response::{IntoResponse, Redirect},
     Extension,
 };
 
+use axum_flash::Flash;
 use hyper::header;
 use sqlx::PgPool;
 use std::sync::Arc;
@@ -67,6 +68,7 @@ impl IntoResponse for PublishError {
 pub async fn publish_newsletter(
     State(pool): State<Arc<PgPool>>,
     State(email_client): State<Arc<EmailClient>>,
+    flash: Flash,
     user_id: Extension<UserId>,
     Form(body): Form<BodyData>,
 ) -> Result<impl IntoResponse, PublishError> {
@@ -91,7 +93,10 @@ pub async fn publish_newsletter(
         }
     }
 
-    Ok(StatusCode::OK)
+    Ok((
+        flash.info("The newsletter issue has been published!"),
+        Redirect::to("/admin/newsletter"),
+    ))
 }
 
 #[tracing::instrument(name = "Get confirmed subscribers", skip(pool))]

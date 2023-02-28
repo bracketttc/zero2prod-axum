@@ -71,6 +71,16 @@ impl TestUser {
         .await
         .expect("Failed to store test user.");
     }
+
+    pub async fn login(&self, app: &TestApp) {
+        let response = app
+            .post_login(&serde_json::json!({
+                "username": &self.username,
+                "password": &self.password,
+            }))
+            .await;
+        assert_is_redirect_to(&response, "/admin/dashboard");
+    }
 }
 
 impl TestApp {
@@ -107,7 +117,7 @@ impl TestApp {
         ConfirmationLinks { html, text }
     }
 
-    pub async fn post_newsletters<Body>(&self, body: &Body) -> reqwest::Response
+    pub async fn post_publish_newsletter<Body>(&self, body: &Body) -> reqwest::Response
     where
         Body: serde::Serialize,
     {
@@ -117,6 +127,18 @@ impl TestApp {
             .send()
             .await
             .expect("Failed to execute request.")
+    }
+
+    pub async fn get_publish_newsletter(&self) -> reqwest::Response {
+        self.api_client
+            .get(format!("{}/admin/newsletter", &self.host))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn get_publish_newsletter_html(&self) -> String {
+        self.get_publish_newsletter().await.text().await.unwrap()
     }
 
     pub async fn post_login<Body>(&self, body: &Body) -> reqwest::Response
