@@ -9,9 +9,9 @@ use askama::Template;
 use axum::{
     extract::{Form, State},
     http::StatusCode,
-    response::{Html, IntoResponse, Response},
+    response::{Html, IntoResponse, Redirect, Response},
 };
-use axum_flash::IncomingFlashes;
+use axum_flash::{Flash, IncomingFlashes};
 use chrono::Utc;
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
 use serde::Deserialize;
@@ -82,7 +82,7 @@ pub async fn subscribe_form(flashes: IncomingFlashes) -> Response {
 // error output here is less than helpful.
 #[tracing::instrument(
     name = "Adding a new subscriber",
-    skip(state, form),
+    skip(state, flash, form),
     fields(
         subscriber_email = %form.email,
         subscriber_name = %form.name
@@ -90,12 +90,61 @@ pub async fn subscribe_form(flashes: IncomingFlashes) -> Response {
 )]
 pub async fn subscribe(
     State(state): State<AppState>,
+    flash: Flash,
     Form(form): Form<FormData>,
-) -> Result<impl IntoResponse, SubscribeError> {
+) -> Result<Response, SubscribeError> {
     let connection_pool = &state.connection_pool;
     let email_client = &state.email_client;
 
-    let new_subscriber = form.try_into().map_err(SubscribeError::ValidationError)?;
+    let new_subscriber: NewSubscriber = form.try_into().map_err(SubscribeError::ValidationError)?;
+    // check for subscriber
+    if let Some((subscription_token, status)) = sqlx::query!(
+        r#"
+        SELECT subscription_token, status
+        FROM subscription_tokens
+        INNER JOIN subscriptions
+        ON subscriptions.id = subscription_tokens.subscriber_id
+        WHERE subscriptions.email = $1
+        "#,
+        &new_subscriber.email.as_ref(),
+    )
+    .fetch_optional(connection_pool.as_ref())
+    .await
+    .unwrap_or_default()
+    .map(|r| (r.subscription_token, r.status))
+    {
+        // subscriber already in database
+        if status == "confirmed" {
+            return Ok((
+                flash.info(format!(
+                    "{} is already subscribed and confirmed!",
+                    &new_subscriber.email
+                )),
+                Redirect::to("/subscriptions"),
+            )
+                .into_response());
+        } else {
+            // subscriber is unconfirmed
+            let email = &new_subscriber.email.to_string().clone();
+            send_confirmation_email(
+                email_client,
+                new_subscriber,
+                &state.base_url,
+                &subscription_token,
+            )
+            .await
+            .context("Failed to send a confirmation email.")?;
+            return Ok((
+                flash.info(format!(
+                    "{} is subscribed, but has not confirmed.\nA confirmation email has been sent.",
+                    email
+                )),
+                Redirect::to("/subscriptions"),
+            )
+                .into_response());
+        }
+    }
+
     let mut transaction = connection_pool
         .begin()
         .await
@@ -119,7 +168,7 @@ pub async fn subscribe(
     )
     .await
     .context("Failed to send a confirmation email.")?;
-    Ok(StatusCode::OK)
+    Ok((flash.info("{}"), StatusCode::OK).into_response())
 }
 
 #[tracing::instrument(
@@ -181,8 +230,10 @@ pub async fn store_token(
     subscription_token: &str,
 ) -> Result<(), StoreTokenError> {
     sqlx::query!(
-        r#"INSERT INTO subscription_tokens (subscription_token, subscriber_id)
-        VALUES ($1, $2)"#,
+        r#"
+        INSERT INTO subscription_tokens (subscription_token, subscriber_id)
+        VALUES ($1, $2)
+        "#,
         subscription_token,
         subscriber_id
     )
