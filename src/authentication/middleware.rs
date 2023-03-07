@@ -27,5 +27,5 @@ pub async fn reject_anonymous_users<B>(mut request: Request<B>, next: Next<B>) -
         }
     }
     //request.uri().path_and_query();
-    return Redirect::to("/login").into_response();
+    Redirect::to("/login").into_response()
 }

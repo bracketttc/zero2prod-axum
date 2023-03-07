@@ -76,7 +76,7 @@ pub async fn change_password(
     //let user_id = session.get_user_id().unwrap();
     let username = get_username(**user_id, &pool)
         .await
-        .map_err(|e| ChangePasswordError::UnexpectedError(e))?;
+        .map_err(ChangePasswordError::UnexpectedError)?;
     // validate current password
     let credentials = Credentials {
         username,

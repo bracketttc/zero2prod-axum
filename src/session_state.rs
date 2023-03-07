@@ -50,7 +50,7 @@ impl Deref for TypedSession {
 }
 
 impl DerefMut for TypedSession {
-    fn deref_mut(self: &mut Self) -> &mut Self::Target {
+    fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }

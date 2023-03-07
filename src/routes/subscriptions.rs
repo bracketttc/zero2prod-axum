@@ -36,11 +36,11 @@ impl IntoResponse for SubscribeError {
     fn into_response(self) -> axum::response::Response {
         let status = match self {
             SubscribeError::ValidationError(_) => {
-                tracing::warn!("{:?}", &self);
+                tracing::warn!("{self:?}");
                 StatusCode::BAD_REQUEST
             }
             SubscribeError::UnexpectedError(_) => {
-                tracing::error!("{:?}", &self);
+                tracing::error!("{self:?}");
                 StatusCode::INTERNAL_SERVER_ERROR
             }
         };
@@ -111,7 +111,7 @@ pub async fn subscribe(
     .fetch_optional(connection_pool.as_ref())
     .await
     .unwrap_or_default()
-    .map(|r| (r.subscription_token, r.status))
+    .map(|r| (r.subscription_token.to_string(), r.status))
     {
         // subscriber already in database
         if status == "confirmed" {
@@ -136,8 +136,7 @@ pub async fn subscribe(
             .context("Failed to send a confirmation email.")?;
             return Ok((
                 flash.info(format!(
-                    "{} is subscribed, but has not confirmed.\nA confirmation email has been sent.",
-                    email
+                    "{email} is subscribed, but has not confirmed.\nA confirmation email has been sent."
                 )),
                 Redirect::to("/subscriptions"),
             )

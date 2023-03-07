@@ -18,7 +18,7 @@ impl Password {
         if analysis.length() > 128 {
             return Err(anyhow!("Password is longer than 128 characters."));
         }
-        Ok(Self(input.clone()))
+        Ok(Self(input))
     }
 }
 
