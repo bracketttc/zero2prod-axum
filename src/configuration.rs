@@ -6,7 +6,10 @@ use sqlx::{
     postgres::{PgConnectOptions, PgSslMode},
     ConnectOptions,
 };
-use std::convert::{TryFrom, TryInto};
+use std::{
+    convert::{TryFrom, TryInto},
+    path::PathBuf,
+};
 
 #[derive(Clone, Deserialize)]
 pub struct Settings {
@@ -28,7 +31,8 @@ pub struct ApplicationSettings {
 #[derive(Clone, Deserialize)]
 pub struct DatabaseSettings {
     pub username: String,
-    pub password: Secret<String>,
+    pub password: Option<Secret<String>>,
+    pub password_file: Option<PathBuf>,
     #[serde(deserialize_with = "deserialize_number_from_string")]
     pub port: u16,
     pub host: String,
@@ -51,10 +55,20 @@ impl DatabaseSettings {
         } else {
             PgSslMode::Prefer
         };
+
+        let password = if let Some(password) = &self.password {
+            password.clone()
+        } else if let Some(password_file) = &self.password_file {
+            Secret::new(std::fs::read_to_string(password_file).expect("Could not read password file"))
+        }
+        else {
+            panic!("No password or password file source specified.");
+        };
+
         PgConnectOptions::new()
             .host(&self.host)
             .username(&self.username)
-            .password(self.password.expose_secret())
+            .password(password.expose_secret())
             .port(self.port)
             .ssl_mode(ssl_mode)
     }
